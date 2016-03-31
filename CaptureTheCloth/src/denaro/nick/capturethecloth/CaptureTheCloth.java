@@ -7,11 +7,14 @@ import java.util.Set;
 
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
+import org.bukkit.block.Block;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
+
+import net.minecraft.server.v1_9_R1.Tuple;
 
 public class CaptureTheCloth extends JavaPlugin
 {
@@ -21,6 +24,7 @@ public class CaptureTheCloth extends JavaPlugin
 	private Location lobbyLocation;
 	private HashMap<Player, Match> playersMatch;
 	private HashMap<Player, Team> playersTeam;
+	private HashMap<Location, Tuple<Match, Team>> buttons;
 	
 	@Override
 	public void onEnable()
@@ -29,10 +33,12 @@ public class CaptureTheCloth extends JavaPlugin
 		matches = new HashMap<String, Match>();
 		playersMatch = new HashMap<Player, Match>();
 		playersTeam = new HashMap<Player, Team>();
+		buttons = new HashMap<Location, Tuple<Match, Team>>();
 		createConfig();
 		loadTeams();
 		loadMatches();
 		loadCommands();
+		loadSettings();
 		registerListeners();
 		System.out.println("CaptureTheCloth was enabled!");
 	}
@@ -72,12 +78,13 @@ public class CaptureTheCloth extends JavaPlugin
 			return location;
 		}
 		player.sendMessage("Not in a team or match.");
-		return null;
+		return lobbyLocation;
 	}
 	
 	private void loadCommands()
 	{
 		CommandEvents commander = new CommandEvents();
+		this.getCommand("set-lobby").setExecutor(commander);
 		this.getCommand("create-team").setExecutor(commander);
 		this.getCommand("create-match").setExecutor(commander);
 		this.getCommand("set-team-spawn").setExecutor(commander);
@@ -87,7 +94,24 @@ public class CaptureTheCloth extends JavaPlugin
 		this.getCommand("start-match").setExecutor(commander);
 		this.getCommand("save-match").setExecutor(commander);
 		this.getCommand("get-team").setExecutor(commander);
+		this.getCommand("link-button").setExecutor(commander);
 		this.getCommand("invisible").setExecutor(commander);
+	}
+	
+	private void saveSettings()
+	{
+		FileConfiguration config = this.getConfig();
+		
+		config.set("lobby", lobbyLocation);
+		
+		saveConf(config);
+	}
+	
+	private void loadSettings()
+	{
+		FileConfiguration config = this.getConfig();
+		
+		lobbyLocation = (Location) config.get("lobby");
 	}
 	
 	private void createConfig()
@@ -114,6 +138,44 @@ public class CaptureTheCloth extends JavaPlugin
 		Match match = playersMatch.get(p1);
 		
 		return match.sameTeam(p1, p2);
+	}
+	
+	public boolean isTeamButton(Location button)
+	{
+		return buttons.containsKey(button);
+	}
+	
+	public boolean joinMatchByButton(Location button, Player player)
+	{
+		Tuple<Match, Team> info = buttons.get(button);
+		if(info == null)
+		{
+			return false;
+		}
+		String matchName = info.a().getName();
+		String teamName = info.b().getName();
+		return joinMatch(matchName, teamName, player);
+	}
+	
+	public void setLobby(Player player)
+	{
+		lobbyLocation = player.getLocation();
+		saveSettings();
+	}
+	
+	public boolean setTeamButton(Player player, Location button)
+	{
+		Team team = playersTeam.get(player);
+		Match match = playersMatch.get(player);
+		
+		if(match == null || team == null)
+		{
+			return false;
+		}
+		
+		buttons.put(button, new Tuple<Match, Team>(match, team));
+		
+		return true;
 	}
 	
 	public boolean setTeamSpawn(Player player)
@@ -286,15 +348,16 @@ public class CaptureTheCloth extends JavaPlugin
 			config.set("matches."+match.getName()+".teams."+teamName+".flag", match.getTeamFlag(teamName));
 		}
 		
-		try
+		for(Location button : buttons.keySet())
 		{
-			File file = new File(getDataFolder(), "config.yml");
-			config.save(file);
+			Tuple<Match, Team> info = buttons.get(button);
+			if(info.a().getName().equals(matchName))
+			{
+				config.set("matches."+match.getName()+".teams."+info.b().getName()+".button", button);
+			}
 		}
-		catch(IOException e)
-		{
-			e.printStackTrace();
-		}
+		
+		saveConf(config);
 		
 		return true;
 	}
@@ -327,8 +390,11 @@ public class CaptureTheCloth extends JavaPlugin
 						match.addTeam(team);
 						Location spawn = (Location) teamSection.get(teamKey + ".spawn");
 						Location flag = (Location) teamSection.get(teamKey + ".flag");
+						Location button = (Location) teamSection.get(teamKey + ".button");
 						match.setTeamSpawn(team, spawn);
 						match.setTeamFlag(team, flag);
+						buttons.put(button, new Tuple<Match, Team>(match,team));
+						System.out.println(button + "\n  "+match.getName()+"::"+team.getName());
 					}
 					else
 					{
@@ -351,14 +417,21 @@ public class CaptureTheCloth extends JavaPlugin
 			config.set("teams." + team.getName() + ".banner", team.getBanner());
 		}
 		
+		saveConf(config);
+	}
+	
+	private boolean saveConf(FileConfiguration config)
+	{
 		try
 		{
 			File file = new File(getDataFolder(), "config.yml");
 			config.save(file);
+			return true;
 		}
 		catch(IOException e)
 		{
 			e.printStackTrace();
+			return false;
 		}
 	}
 	

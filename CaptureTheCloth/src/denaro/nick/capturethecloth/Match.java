@@ -73,6 +73,8 @@ public class Match
 			team.sendMessage(ChatColor.GOLD + "Match start!");
 		}
 		
+		
+		
 		Timer timer = new Timer();
 		timer.schedule(new TimerTask() {
 			@Override
@@ -239,6 +241,7 @@ public class Match
 				if(team.getNumberOfPlayers() < maxTeamSize)
 				{
 					team.addPlayer(player);
+					player.teleport(spawns.get(team));
 					System.out.println("Added " + player.getName() + " to team " + team.getName() + ".");
 					player.sendMessage(ChatColor.AQUA + "Joined team " + teamName);
 					return true;
@@ -329,6 +332,11 @@ public class Match
 					}
 					else
 					{
+						if(flag != flags.get(team))
+						{
+							transferFlag(team);
+						}
+						
 						if(flag == flags.get(team) && heldFlags.get(player) != null)
 						{
 							scoreFlag(player);
@@ -359,7 +367,7 @@ public class Match
 		builder.flicker(true);
 		builder.withColor(Color.WHITE);
 		meta.addEffect(builder.build());
-		meta.setPower(3);
+		meta.setPower(2);
 		firework.setFireworkMeta(meta);
 	}
 	
@@ -367,14 +375,29 @@ public class Match
 	{
 		if(heldFlags.get(player) != null)
 		{
+			CaptureTheCloth.instance().getServer().broadcastMessage(player.getName() + " had a flag.");
 			Team otherTeam = heldFlags.get(player);
-			replaceFlag(otherTeam, player.getLocation());
+			Location flagPos = replaceFlag(otherTeam, player.getLocation());
 			heldFlags.remove(player);
-			currentFlags.put(otherTeam, player.getLocation());
+			currentFlags.put(otherTeam, flagPos);
 			
 			Team team = CaptureTheCloth.instance().getTeam(player);
 			player.getInventory().setHelmet(new ItemStack(team.getBlock()));
+			
+			player.sendMessage(ChatColor.LIGHT_PURPLE + "" + player.getLocation());
 		}
+		else
+		{
+			CaptureTheCloth.instance().getServer().broadcastMessage(player.getName() + " didn't have a flag.");
+		}
+	}
+	
+	public void transferFlag(Team team)
+	{
+		Location location = currentFlags.get(team);
+		currentFlags.put(team, flags.get(team));
+		location.getBlock().setType(Material.AIR);
+		replaceFlag(team);
 	}
 	
 	public void replaceFlag(Team team)
@@ -383,12 +406,25 @@ public class Match
 		replaceFlag(team, location);
 	}
 	
-	public void replaceFlag(Team team, Location location)
+	public Location replaceFlag(Team team, Location location)
 	{
-		
 		World world = CaptureTheCloth.instance().getServer().getWorlds().get(0);
-		Block block = world.getBlockAt(location);
+	
+		while(!location.getWorld().getBlockAt(location.getBlockX(), location.getBlockY() - 1, location.getBlockZ()).getType().isSolid() && location.getY() > 1)
+		{
+			location.setY(location.getY() - 1);
+		}
 		
+		if(location.getY() < 1)
+		{
+			CaptureTheCloth.instance().getServer().broadcast(ChatColor.RED + "ERROR: Failed to place flag at death location, placing at spawn.", null);
+			
+			location = flags.get(team);
+		}
+		
+		final Location finLoc = location;
+		
+		Block block = world.getBlockAt(finLoc);
 		block.setType(Material.STANDING_BANNER);
 		
 		new BukkitRunnable(){
@@ -396,7 +432,7 @@ public class Match
 			@Override
 			public void run()
 			{
-				Block block = world.getBlockAt(location);
+				Block block = world.getBlockAt(finLoc);
 				BlockState state = block.getState();
 				CraftBanner blockmeta = (CraftBanner) state;
 				
@@ -409,6 +445,8 @@ public class Match
 				state.update();
 			}
 			
-		}.runTask(CaptureTheCloth.instance());
+		}.runTaskLater(CaptureTheCloth.instance(), 1);
+		
+		return finLoc;
 	}
 }

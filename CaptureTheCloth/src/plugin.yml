@@ -2,6 +2,9 @@ name: CaptureTheCloth
 main: denaro.nick.capturethecloth.CaptureTheCloth
 version: 1.0
 commands:
+  set-lobby:
+    description: Sets the lobby location
+    usage: /set-lobby
   create-team:
     description: Creates a team with a block
     usage: /create-team <name>
@@ -30,6 +33,9 @@ commands:
   save-match:
     description: Saves a match
     usage: /save-match <name>
+  link-button:
+    description: Links the button you are looking at to the team you are on
+    usage: /link-button
   invisible:
     description: makes you invisible to the other team
     usage: /invisible <on/off>

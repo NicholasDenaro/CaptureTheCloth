@@ -3,6 +3,7 @@ package denaro.nick.capturethecloth;
 import org.bukkit.ChatColor;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.block.Banner;
 import org.bukkit.block.Block;
 import org.bukkit.craftbukkit.v1_9_R1.block.CraftBlock;
@@ -14,10 +15,14 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDamageEvent.DamageCause;
+import org.bukkit.event.entity.EntityRegainHealthEvent;
+import org.bukkit.event.entity.EntityRegainHealthEvent.RegainReason;
+import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerLevelChangeEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
@@ -70,7 +75,10 @@ public class PlayerEvents implements Listener
 			}
 			else
 			{
-				
+				if(defender.isDead())
+				{
+					attacker.setLevel(attacker.getLevel() + 1);
+				}
 			}
 		}
 	}
@@ -98,6 +106,22 @@ public class PlayerEvents implements Listener
 	{
 		if(event.getPlayer().getGameMode() != GameMode.CREATIVE)
 		{
+			if(CaptureTheCloth.instance().isTeamButton(event.getClickedBlock().getLocation()))
+			{
+				if(CaptureTheCloth.instance().joinMatchByButton(event.getClickedBlock().getLocation(), event.getPlayer()))
+				{
+					event.getPlayer().sendMessage(ChatColor.GREEN + "Joined match.");
+				}
+				else
+				{
+					event.getPlayer().sendMessage(ChatColor.RED + "Failed to join match.");
+				}
+			}
+			else
+			{
+				event.getPlayer().sendMessage(ChatColor.AQUA + "Not a team join button.");
+			}
+			
 			if(event.hasBlock())
 			{
 				event.setCancelled(true);
@@ -112,9 +136,39 @@ public class PlayerEvents implements Listener
 		Match match = CaptureTheCloth.instance().getMatch(player);
 		if(match != null)
 		{
-			match.updateVisibility(player);
-			match.pickupFlag(player);
+			if(!player.isDead())
+			{
+				if(event.getTo().getBlock().getType() == Material.LONG_GRASS)
+				{
+					match.makeInvisible(player);
+				}
+				else
+				{
+					match.makeVisible(player);
+				}
+				match.updateVisibility(player);
+				match.pickupFlag(player);
+			}
 		}
+	}
+	
+	@EventHandler
+	public void onPlayerHeal(EntityRegainHealthEvent event)
+	{
+		if(event.getEntity() instanceof Player)
+		{
+			if(event.getRegainReason() == RegainReason.SATIATED)
+			{
+				//event.setAmount(0);
+				event.setCancelled(true);
+			}
+		}
+	}
+	
+	@EventHandler
+	public void onPlayerFoodChange(FoodLevelChangeEvent event)
+	{
+		event.setCancelled(true);
 	}
 	
 	@EventHandler
@@ -136,6 +190,7 @@ public class PlayerEvents implements Listener
 	{
 		event.setKeepInventory(true);
 		event.setKeepLevel(true);
+		event.setDroppedExp(0);
 		
 		Player player = event.getEntity();
 		

@@ -40,9 +40,9 @@ public class Team
 		stack.setAmount(1);
 		inv.setHelmet(stack);
 		
-		stack = new ItemStack(banner);
-		stack.setAmount(1);
-		inv.setItemInOffHand(stack);
+		//stack = new ItemStack(banner);
+		//stack.setAmount(1);
+		//inv.setItemInOffHand(stack);
 	}
 	
 	public boolean removePlayer(Player player)
@@ -85,7 +85,7 @@ public class Team
 	{
 		for(Player p : players)
 		{
-			if(p.getLocation().distance(player.getLocation()) < 5)
+			if(p.getLocation().distance(player.getLocation()) < 3)
 			{
 				p.showPlayer(player);
 				player.showPlayer(p);

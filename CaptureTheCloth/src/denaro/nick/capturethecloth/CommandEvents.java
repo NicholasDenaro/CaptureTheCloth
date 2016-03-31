@@ -1,7 +1,12 @@
 package denaro.nick.capturethecloth;
 
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
+
 import org.bukkit.Material;
 import org.bukkit.block.Banner;
+import org.bukkit.block.Block;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -245,6 +250,48 @@ public class CommandEvents implements CommandExecutor
 					else
 					{
 						player.sendMessage(ChatColor.RED + "Failed to save match.");
+					}
+				}
+			}
+			else if("set-lobby".equals(command.getName()))
+			{
+				if(args.length != 0)
+				{
+					player.sendMessage(ChatColor.RED + "This command takes no arguments.");
+					return false;
+				}
+				else
+				{
+					CaptureTheCloth.instance().setLobby(player);
+					player.sendMessage(ChatColor.GREEN + "Lobby set.");
+				}
+			}
+			else if("link-button".equals(command.getName()))
+			{
+				if(args.length != 0)
+				{
+					player.sendMessage(ChatColor.RED + "This command takes no arguments.");
+					return false;
+				}
+				else
+				{
+					Set<Material> mats = new HashSet<Material>();
+					mats.add(Material.WOOD_BUTTON);
+					Block button = player.getTargetBlock(mats, 1);
+					if(button == null)
+					{
+						return false;
+					}
+					else
+					{
+						if(CaptureTheCloth.instance().setTeamButton(player, button.getLocation()))
+						{
+							player.sendMessage(ChatColor.GREEN + "Linked button to team: "+CaptureTheCloth.instance().getTeam(player));
+						}
+						else
+						{
+							player.sendMessage(ChatColor.RED + "Failed to link button.");
+						}
 					}
 				}
 			}
