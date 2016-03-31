@@ -1,0 +1,36 @@
+name: CaptureTheCloth
+main: denaro.nick.capturethecloth.CaptureTheCloth
+version: 1.0
+commands:
+  create-team:
+    description: Creates a team with a block
+    usage: /create-team <name>
+    aliases: ct  
+  get-team:
+    description: Gets your team
+    usage: /get-team
+  set-team-spawn:
+    description: Sets your team's spawn
+    usage: /set-team-spawn
+  set-team-flag:
+    description: Sets your team's flag position
+    usage: /set-team-flag
+  create-match:
+    description: Creates a match with a block
+    usage: /create-match <name> <time(seconds)> <team size> [teams]
+  join-match:
+    description: Join a match
+    usage: /join-match <match name> <team name>
+  leave-match:
+    description: Leaves a match
+    usage: /leave-match
+  start-match:
+    description: Starts a match
+    usage: /start-match <name>
+  save-match:
+    description: Saves a match
+    usage: /save-match <name>
+  invisible:
+    description: makes you invisible to the other team
+    usage: /invisible <on/off>
+    aliases: inv
