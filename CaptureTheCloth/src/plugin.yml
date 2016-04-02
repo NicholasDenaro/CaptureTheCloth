@@ -40,3 +40,15 @@ commands:
     description: makes you invisible to the other team
     usage: /invisible <on/off>
     aliases: inv
+  archer:
+    description: archer loadout
+    usage: /archer
+  magician:
+    description: magician loadout
+    usage: /magician
+  warrior:
+    description: warrior loadout
+    usage: /warrior
+  ctc-reload:
+    description: reloads ctc
+    usage: /ctc-reload

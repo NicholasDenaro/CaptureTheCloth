@@ -1,5 +1,7 @@
 package denaro.nick.capturethecloth;
 
+import java.io.File;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
@@ -10,9 +12,14 @@ import org.bukkit.block.Block;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.SimpleCommandMap;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.material.MaterialData;
+import org.bukkit.plugin.InvalidPluginException;
+import org.bukkit.plugin.Plugin;
+import org.bukkit.plugin.PluginLoader;
+import org.bukkit.plugin.UnknownDependencyException;
 
 import net.md_5.bungee.api.ChatColor;
 
@@ -26,7 +33,26 @@ public class CommandEvents implements CommandExecutor
 			player = (Player) sender;
 		if(sender.isOp())
 		{
-			if("create-team".equals(command.getName()))
+			if("ctc-reload".equals(command.getName()))
+			{
+				player.sendMessage(ChatColor.GRAY + "This command is disabled.");
+				
+				if(true)return true;
+				
+				PluginLoader loader = CaptureTheCloth.instance().getPluginLoader();
+				loader.disablePlugin(CaptureTheCloth.instance());
+				try
+				{
+					Plugin plugin = loader.loadPlugin(new File("plugins/CaptureTheCloth.jar"));
+					loader.enablePlugin(plugin);
+				}
+				catch(UnknownDependencyException | InvalidPluginException e)
+				{
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+			else if("create-team".equals(command.getName()))
 			{
 				if(args.length == 1)
 				{
@@ -113,12 +139,15 @@ public class CommandEvents implements CommandExecutor
 						player.sendMessage(ChatColor.GOLD + "Not in a match.");
 						return true;
 					}
-					Team team = match.getTeam(player);
-					player.sendMessage(ChatColor.GOLD + team.getName());
+					//Team team = match.getTeam(player);
+					Team playerTeam = CaptureTheCloth.instance().getTeam(player);
+					player.sendMessage(ChatColor.GOLD + playerTeam.getName());
 				}
 			}
 			else if("invisible".equals(command.getName()))
 			{
+				if(true)
+					return false;
 				if(args.length != 1)
 				{
 					player.sendMessage(ChatColor.RED + "Incorrect number of arguments.");
@@ -143,6 +172,56 @@ public class CommandEvents implements CommandExecutor
 							return false;
 						}
 					}
+				}
+			}
+			else if("archer".equals(command.getName()))
+			{
+				if(args.length != 0)
+				{
+					player.sendMessage(ChatColor.RED + "Incorrect number of arguments.");
+				}
+				else
+				{
+					Match match = CaptureTheCloth.instance().getMatch(player);
+					if(match == null)
+					{
+						player.sendMessage(ChatColor.GOLD + "Not in a match.");
+						return true;
+					}
+					Archer.setLoadout(player);
+				}
+			}else if("magician".equals(command.getName()))
+			{
+				if(args.length != 0)
+				{
+					player.sendMessage(ChatColor.RED + "Incorrect number of arguments.");
+				}
+				else
+				{
+					Match match = CaptureTheCloth.instance().getMatch(player);
+					if(match == null)
+					{
+						player.sendMessage(ChatColor.GOLD + "Not in a match.");
+						return true;
+					}
+					Magician.setLoadout(player);
+				}
+			}
+			else if("warrior".equals(command.getName()))
+			{
+				if(args.length != 0)
+				{
+					player.sendMessage(ChatColor.RED + "Incorrect number of arguments.");
+				}
+				else
+				{
+					Match match = CaptureTheCloth.instance().getMatch(player);
+					if(match == null)
+					{
+						player.sendMessage(ChatColor.GOLD + "Not in a match.");
+						return true;
+					}
+					Warrior.setLoadout(player);
 				}
 			}
 			else if("create-match".equals(command.getName()))

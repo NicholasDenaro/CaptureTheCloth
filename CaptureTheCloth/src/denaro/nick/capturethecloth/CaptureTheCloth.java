@@ -7,51 +7,69 @@ import java.util.Set;
 
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
-import org.bukkit.block.Block;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.scheduler.BukkitRunnable;
 
 import net.minecraft.server.v1_9_R1.Tuple;
 
 public class CaptureTheCloth extends JavaPlugin
 {
+	private boolean firstLoad = true;
+	
+	public static final long TICKS_PER_SECOND = 20;
+	
 	private static CaptureTheCloth instance;
 	private HashMap<String, Team> teams;
 	private HashMap<String, Match> matches;
 	private Location lobbyLocation;
 	private HashMap<Player, Match> playersMatch;
 	private HashMap<Player, Team> playersTeam;
+	private HashMap<Player, Class<?>> playersLoadouts;
 	private HashMap<Location, Tuple<Match, Team>> buttons;
 	
 	@Override
 	public void onEnable()
 	{
-		instance = this;
+		if(firstLoad)instance = this;
 		matches = new HashMap<String, Match>();
 		playersMatch = new HashMap<Player, Match>();
 		playersTeam = new HashMap<Player, Team>();
+		playersLoadouts = new HashMap<Player, Class<?>>();
 		buttons = new HashMap<Location, Tuple<Match, Team>>();
-		createConfig();
+		if(firstLoad)createConfig();
 		loadTeams();
 		loadMatches();
-		loadCommands();
+		if(firstLoad)loadCommands();
 		loadSettings();
-		registerListeners();
+		if(firstLoad)registerListeners();
 		System.out.println("CaptureTheCloth was enabled!");
+		getServer().broadcastMessage(ChatColor.AQUA + "Enabled CTC");
+		getServer().broadcastMessage(ChatColor.AQUA + "testing... CTC");
+		
+		firstLoad = false;
 	}
 	
 	@Override
 	public void onDisable()
 	{
+		for(Player player : playersMatch.keySet())
+		{
+			leaveMatch(player);
+		}
 		System.out.println("CaptureTheCloth was disabled!");
+		getServer().broadcastMessage(ChatColor.DARK_AQUA + "Diabled CTC");
 	}
 	
 	private void registerListeners()
 	{
 		this.getServer().getPluginManager().registerEvents(new PlayerEvents(), this);
+		this.getServer().getPluginManager().registerEvents(new Archer(), this);
+		this.getServer().getPluginManager().registerEvents(new Magician(), this);
+		this.getServer().getPluginManager().registerEvents(new Warrior(), this);
 	}
 	
 	public Location getLobbyLocation()
@@ -81,21 +99,47 @@ public class CaptureTheCloth extends JavaPlugin
 		return lobbyLocation;
 	}
 	
+	public static void cooldown(ItemStack item)
+	{
+		new BukkitRunnable()
+		{
+			@Override
+			public void run()
+			{
+				if(item.getAmount() > 1)
+				{
+					item.setAmount(item.getAmount() - 1);
+				}
+				
+				if(item.getAmount() == 1)
+				{
+					this.cancel();
+				}
+			}
+			
+		}.runTaskTimer(CaptureTheCloth.instance(), CaptureTheCloth.TICKS_PER_SECOND * 1, CaptureTheCloth.TICKS_PER_SECOND * 1);
+	}
+	
 	private void loadCommands()
 	{
 		CommandEvents commander = new CommandEvents();
-		this.getCommand("set-lobby").setExecutor(commander);
-		this.getCommand("create-team").setExecutor(commander);
-		this.getCommand("create-match").setExecutor(commander);
-		this.getCommand("set-team-spawn").setExecutor(commander);
-		this.getCommand("set-team-flag").setExecutor(commander);
-		this.getCommand("join-match").setExecutor(commander);
-		this.getCommand("leave-match").setExecutor(commander);
-		this.getCommand("start-match").setExecutor(commander);
-		this.getCommand("save-match").setExecutor(commander);
-		this.getCommand("get-team").setExecutor(commander);
-		this.getCommand("link-button").setExecutor(commander);
-		this.getCommand("invisible").setExecutor(commander);
+		
+		getCommand("set-lobby").setExecutor(commander);
+		getCommand("create-team").setExecutor(commander);
+		getCommand("create-match").setExecutor(commander);
+		getCommand("set-team-spawn").setExecutor(commander);
+		getCommand("set-team-flag").setExecutor(commander);
+		getCommand("join-match").setExecutor(commander);
+		getCommand("leave-match").setExecutor(commander);
+		getCommand("start-match").setExecutor(commander);
+		getCommand("save-match").setExecutor(commander);
+		getCommand("get-team").setExecutor(commander);
+		getCommand("link-button").setExecutor(commander);
+		getCommand("invisible").setExecutor(commander);
+		getCommand("archer").setExecutor(commander);
+		getCommand("magician").setExecutor(commander);
+		getCommand("warrior").setExecutor(commander);
+		getCommand("ctc-reload").setExecutor(commander);
 	}
 	
 	private void saveSettings()
@@ -128,16 +172,22 @@ public class CaptureTheCloth extends JavaPlugin
         }
 	}
 	
+	public void resetPlayerInventory(Player player)
+	{
+		player.getInventory().clear();
+		player.getInventory().setHelmet(playersTeam.get(player).getBlock());
+	}
+	
 	public boolean sameTeam(Player p1, Player p2)
 	{
 		if(playersMatch.get(p1) != playersMatch.get(p2))
 		{
-			p1.sendMessage(ChatColor.DARK_BLUE + "Not in the same match you twat.");
 			return false;
 		}
-		Match match = playersMatch.get(p1);
+		//Match match = playersMatch.get(p1);
 		
-		return match.sameTeam(p1, p2);
+		//return match.sameTeam(p1, p2);
+		return playersTeam.get(p1) == playersTeam.get(p2) && playersTeam.get(p1) != null;
 	}
 	
 	public boolean isTeamButton(Location button)
@@ -231,6 +281,11 @@ public class CaptureTheCloth extends JavaPlugin
 	
 	public boolean joinMatch(String matchName, String teamName, Player player)
 	{
+		if(playersMatch.containsKey(player))
+		{
+			player.sendMessage(ChatColor.RED + "Already in match.");
+			return false;
+		}
 		for(Match match: matches.values())
 		{
 			if(match.getName().equals(matchName))
@@ -238,15 +293,17 @@ public class CaptureTheCloth extends JavaPlugin
 				if(match.addPlayer(teamName, player))
 				{
 					playersMatch.put(player, match);
-					playersTeam.put(player,match.getTeam(player));
+					playersTeam.put(player, match.getTeam(teamName));
 					return true;
 				}
 				else
 				{
+					player.sendMessage(ChatColor.RED + "failed to join match.");
 					return false;
 				}
 			}
 		}
+		player.sendMessage(ChatColor.RED + "Match with team doesn't exist.");
 		return false;
 	}
 	
@@ -254,6 +311,7 @@ public class CaptureTheCloth extends JavaPlugin
 	{
 		if(playersMatch.get(player) == null)
 		{
+			System.out.println("match was null.");
 			return false;
 		}
 		else
@@ -266,13 +324,24 @@ public class CaptureTheCloth extends JavaPlugin
 			}
 			if(game.removePlayer(player))
 			{
-				playersMatch.put(player, null);
 				player.teleport(getLobbyLocation());
 				player.getInventory().clear();
+				removePlayerLoadout(player);
+				player.sendMessage("Left match.");
+				
+				playersMatch.remove(player);
+				playersTeam.remove(player);
+				
 				return true;
 			}
+			player.sendMessage(ChatColor.RED + "Failed to leave match?!");
 		}
 		return false;
+	}
+	
+	public void removePlayersTeam(Player player)
+	{
+		playersTeam.remove(player);
 	}
 	
 	public boolean createMatch(String name, long time, int maxTeamSize, String... teamNames)
@@ -455,5 +524,20 @@ public class CaptureTheCloth extends JavaPlugin
 		{
 			System.out.println("teams was null");
 		}
+	}
+	
+	public void removePlayerLoadout(Player player)
+	{
+		playersLoadouts.remove(player);
+	}
+	
+	public void setPlayerLoadout(Player player, Class<?> c)
+	{
+		playersLoadouts.put(player, c);
+	}
+
+	public boolean isPlayerLoadout(Player player, Class<?> c)
+	{
+		return playersLoadouts.get(player) == c;
 	}
 }

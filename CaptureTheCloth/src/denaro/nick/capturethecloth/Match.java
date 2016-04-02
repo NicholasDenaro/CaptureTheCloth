@@ -2,11 +2,7 @@ package denaro.nick.capturethecloth;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Set;
-import java.util.Timer;
-import java.util.TimerTask;
 
-import org.bukkit.Color;
 import org.bukkit.Effect;
 import org.bukkit.FireworkEffect;
 import org.bukkit.Location;
@@ -73,10 +69,8 @@ public class Match
 			team.sendMessage(ChatColor.GOLD + "Match start!");
 		}
 		
-		
-		
-		Timer timer = new Timer();
-		timer.schedule(new TimerTask() {
+		new BukkitRunnable(){
+
 			@Override
 			public void run()
 			{
@@ -113,7 +107,7 @@ public class Match
 				}
 			}
 			
-		}, time);
+		}.runTaskLater(CaptureTheCloth.instance(), time * CaptureTheCloth.TICKS_PER_SECOND);
 		
 		started = true;
 		return true;
@@ -208,7 +202,7 @@ public class Match
 		}
 	}
 	
-	public boolean sameTeam(Player p1, Player p2)
+	/*public boolean sameTeam(Player p1, Player p2)
 	{
 		for(Team team : teams)
 		{
@@ -218,13 +212,25 @@ public class Match
 			}
 		}
 		return false;
-	}
+	}*/
 	
-	public Team getTeam(Player player)
+	/*public Team getTeam(Player player)
 	{
 		for(Team team : teams)
 		{
 			if(team.hasPlayer(player))
+			{
+				return team;
+			}
+		}
+		return null;
+	}*/
+	
+	public Team getTeam(String teamName)
+	{
+		for(Team team : teams)
+		{
+			if(team.getName().equals(teamName))
 			{
 				return team;
 			}
@@ -263,21 +269,26 @@ public class Match
 	
 	public boolean removePlayer(Player player)
 	{
+		Team playerTeam = CaptureTheCloth.instance().getTeam(player);
 		for(Team team : teams)
 		{
-			if(team.hasPlayer(player))
+			//if(team.hasPlayer(player))
+			if(playerTeam == team)
 			{
+				CaptureTheCloth.instance().removePlayersTeam(player);
 				return team.removePlayer(player);
 			}
 		}
-		return true;
+		return false;
 	}
 	
 	public void updateVisibility(Player player)
 	{
+		Team playerTeam = CaptureTheCloth.instance().getTeam(player);
 		for(Team team : teams)
 		{
-			if(!team.hasPlayer(player))
+			//if(!team.hasPlayer(player))
+			if(playerTeam != team)
 			{
 				team.updateVisibility(player, invisiblePlayers.keySet());
 			}
@@ -288,9 +299,11 @@ public class Match
 	public void makeInvisible(Player player)
 	{
 		invisiblePlayers.put(player,player);
+		Team playerTeam = CaptureTheCloth.instance().getTeam(player);
 		for(Team team : teams)
 		{
-			if(!team.hasPlayer(player))
+			//if(!team.hasPlayer(player))
+			if(playerTeam != team)
 			{
 				team.makeInvisible(player);
 			}
@@ -300,9 +313,11 @@ public class Match
 	public void makeVisible(Player player)
 	{
 		invisiblePlayers.remove(player);
+		Team playerTeam = CaptureTheCloth.instance().getTeam(player);
 		for(Team team : teams)
 		{
-			if(!team.hasPlayer(player))
+			//if(!team.hasPlayer(player))
+			if(playerTeam != team)
 			{
 				team.makeVisible(player);
 			}
@@ -311,6 +326,7 @@ public class Match
 
 	public void pickupFlag(Player player)
 	{
+		Team playerTeam = CaptureTheCloth.instance().getTeam(player);
 		for(Team team : teams)
 		{
 			Location flag = currentFlags.get(team);
@@ -318,7 +334,8 @@ public class Match
 			{
 				if(flag.distance(player.getLocation()) < 1)
 				{
-					if(!team.hasPlayer(player))
+					//if(!team.hasPlayer(player))
+					if(playerTeam != team)
 					{
 						if(heldFlags.get(player) == null)
 						{
@@ -365,9 +382,10 @@ public class Match
 		FireworkEffect.Builder builder = FireworkEffect.builder();
 		builder.trail(true);
 		builder.flicker(true);
-		builder.withColor(Color.WHITE);
+		BannerMeta bmeta = (BannerMeta) otherTeam.getBanner().getItemMeta();
+		builder.withColor(bmeta.getBaseColor().getColor());
 		meta.addEffect(builder.build());
-		meta.setPower(2);
+		meta.setPower(1);
 		firework.setFireworkMeta(meta);
 	}
 	
@@ -375,7 +393,7 @@ public class Match
 	{
 		if(heldFlags.get(player) != null)
 		{
-			CaptureTheCloth.instance().getServer().broadcastMessage(player.getName() + " had a flag.");
+			//CaptureTheCloth.instance().getServer().broadcastMessage(player.getName() + " had a flag.");
 			Team otherTeam = heldFlags.get(player);
 			Location flagPos = replaceFlag(otherTeam, player.getLocation());
 			heldFlags.remove(player);
@@ -383,12 +401,10 @@ public class Match
 			
 			Team team = CaptureTheCloth.instance().getTeam(player);
 			player.getInventory().setHelmet(new ItemStack(team.getBlock()));
-			
-			player.sendMessage(ChatColor.LIGHT_PURPLE + "" + player.getLocation());
 		}
 		else
 		{
-			CaptureTheCloth.instance().getServer().broadcastMessage(player.getName() + " didn't have a flag.");
+			//CaptureTheCloth.instance().getServer().broadcastMessage(player.getName() + " didn't have a flag.");
 		}
 	}
 	
@@ -419,6 +435,11 @@ public class Match
 		{
 			CaptureTheCloth.instance().getServer().broadcast(ChatColor.RED + "ERROR: Failed to place flag at death location, placing at spawn.", null);
 			
+			location = flags.get(team);
+		}
+		
+		if(location.getBlock().getType() != Material.AIR)
+		{
 			location = flags.get(team);
 		}
 		

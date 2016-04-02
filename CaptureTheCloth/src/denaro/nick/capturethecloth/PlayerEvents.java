@@ -4,14 +4,13 @@ import org.bukkit.ChatColor;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.block.Banner;
 import org.bukkit.block.Block;
-import org.bukkit.craftbukkit.v1_9_R1.block.CraftBlock;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDamageEvent.DamageCause;
@@ -22,13 +21,11 @@ import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.event.player.PlayerLevelChangeEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.event.player.PlayerSwapHandItemsEvent;
-
-import net.minecraft.server.v1_9_R1.BlockBanner;
+import org.bukkit.scheduler.BukkitRunnable;
 
 public class PlayerEvents implements Listener
 {
@@ -75,7 +72,7 @@ public class PlayerEvents implements Listener
 			}
 			else
 			{
-				if(defender.isDead())
+				if(defender.getHealth() <= 0)
 				{
 					attacker.setLevel(attacker.getLevel() + 1);
 				}
@@ -106,25 +103,67 @@ public class PlayerEvents implements Listener
 	{
 		if(event.getPlayer().getGameMode() != GameMode.CREATIVE)
 		{
-			if(CaptureTheCloth.instance().isTeamButton(event.getClickedBlock().getLocation()))
+			if(event.getAction() == Action.RIGHT_CLICK_BLOCK)
 			{
-				if(CaptureTheCloth.instance().joinMatchByButton(event.getClickedBlock().getLocation(), event.getPlayer()))
+				if(CaptureTheCloth.instance().isTeamButton(event.getClickedBlock().getLocation()))
 				{
-					event.getPlayer().sendMessage(ChatColor.GREEN + "Joined match.");
+					if(CaptureTheCloth.instance().joinMatchByButton(event.getClickedBlock().getLocation(), event.getPlayer()))
+					{
+						event.getPlayer().sendMessage(ChatColor.GREEN + "Joined match.");
+					}
+					else
+					{
+						event.getPlayer().sendMessage(ChatColor.RED + "Failed to join match.");
+					}
 				}
 				else
 				{
-					event.getPlayer().sendMessage(ChatColor.RED + "Failed to join match.");
+					//event.getPlayer().sendMessage(ChatColor.AQUA + "Not a team join button.");
 				}
 			}
-			else
-			{
-				event.getPlayer().sendMessage(ChatColor.AQUA + "Not a team join button.");
-			}
 			
-			if(event.hasBlock())
+			if(event.getAction() == Action.LEFT_CLICK_BLOCK)
 			{
 				event.setCancelled(true);
+				if(event.getClickedBlock().getType() == Material.DOUBLE_PLANT)
+				{
+					new BukkitRunnable()
+					{
+
+						@Override
+						public void run()
+						{
+							Block block = event.getClickedBlock();
+							//event.getPlayer().sendMessage(ChatColor.AQUA + "" + event.getClickedBlock().getType());
+							//event.getPlayer().sendMessage(ChatColor.AQUA + "" + event.getClickedBlock().getData());
+							Location loc = block.getLocation();
+							Location under = loc.clone();
+							under.setY(under.getY() - 1);
+							Location over = loc.clone();
+							over.setY(over.getY() + 1);
+							if(under.getBlock().getType() == Material.GRASS)
+							{
+								block.setType(Material.DOUBLE_PLANT);
+								block.setData((byte) 2);
+								over.getBlock().setType(Material.DOUBLE_PLANT);
+								over.getBlock().setData((byte) 10);
+							}
+							else
+							{
+								under.getBlock().setType(Material.DOUBLE_PLANT);
+								under.getBlock().setData((byte) 2);
+								block.setType(Material.DOUBLE_PLANT);
+								block.setData((byte) 10);
+							}
+						}
+						
+					}.runTaskLater(CaptureTheCloth.instance(), 1);
+					
+				}
+				else
+				{
+					//event.getPlayer().sendMessage(ChatColor.AQUA + "" + event.getClickedBlock().getType());
+				}
 			}
 		}
 	}

@@ -27,10 +27,10 @@ public class Team
 		return players.size();
 	}
 	
-	public boolean hasPlayer(Player player)
+	/*public boolean hasPlayer(Player player)
 	{
 		return players.contains(player);
-	}
+	}*/
 	
 	public void addPlayer(Player player)
 	{
