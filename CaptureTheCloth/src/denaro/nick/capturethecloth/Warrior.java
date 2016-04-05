@@ -6,12 +6,19 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent.DamageModifier;
+import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.player.PlayerToggleSprintEvent;
+import org.bukkit.event.player.PlayerVelocityEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 
 public class Warrior implements Listener
 {
+	public static final int BULLDOZE_SLOT = 1;
+	
 	public static void setLoadout(Player player)
 	{
 		PlayerInventory inventory = player.getInventory();
@@ -22,10 +29,34 @@ public class Warrior implements Listener
 		inventory.setBoots(new ItemStack(Material.IRON_BOOTS));
 		inventory.setItem(0, new ItemStack(Material.DIAMOND_SWORD));
 		
+		inventory.setItem(1, new ItemStack(Material.SUGAR));
+		
 		ItemStack shield = new ItemStack(Material.SHIELD);
 		inventory.setItemInOffHand(shield);
-		
-		CaptureTheCloth.instance().setPlayerLoadout(player, Warrior.class);
+	}
+	
+	@EventHandler
+	public void onPlayerSprint(PlayerToggleSprintEvent event)
+	{
+		if(!CaptureTheCloth.instance().isSpawned(event.getPlayer()))
+		{
+			event.setCancelled(true);
+			return;
+		}
+		if(event.isSprinting())
+		{
+			Player player = (Player) event.getPlayer();
+			if(CaptureTheCloth.instance().isPlayerLoadout(player, this.getClass()))
+			{
+				ItemStack sprint = player.getInventory().getItem(BULLDOZE_SLOT);
+				if(sprint.getAmount() == 1)
+				{
+					player.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, (int) (CaptureTheCloth.TICKS_PER_SECOND * 0.25), 10));
+					sprint.setAmount(11);
+					CaptureTheCloth.cooldown(sprint);
+				}
+			}
+		}
 	}
 	
 	@EventHandler//(priority = EventPriority.HIGHEST)
@@ -34,64 +65,30 @@ public class Warrior implements Listener
 		if(event.getEntity() instanceof Player)
 		{
 			Player player = (Player) event.getEntity();
-			player.sendMessage("Blocking modifier: "+event.getDamage(DamageModifier.BLOCKING));
-			if(event.getDamage(DamageModifier.BLOCKING) < 0)
+			if(!CaptureTheCloth.instance().isSpawned(player))
 			{
-				if(player.isBlocking())
-				{
-					//new BukkitRunnable()
-					//{
-						//@Override
-						//public void run()
-						{
-							player.getInventory().setItemInOffHand(new ItemStack(Material.AIR));
-							new BukkitRunnable()
-							{
-								@Override
-								public void run()
-								{
-									player.getInventory().setItemInOffHand(new ItemStack(Material.SHIELD));
-								}
-								
-							}.runTaskLater(CaptureTheCloth.instance(), CaptureTheCloth.TICKS_PER_SECOND * 3);
-						}
-						
-					//}.runTaskLater(CaptureTheCloth.instance(), CaptureTheCloth.TICKS_PER_SECOND * 2);
-				}
-				else
-				{
-					player.sendMessage("Why didn't you block?");
-				}
+				event.setCancelled(true);
+				return;
 			}
-		}
-	}
-	
-	/*@EventHandler
-	public void onShield(PlayerInteractEvent event)
-	{
-		if(event.getAction() == Action.RIGHT_CLICK_AIR || event.getAction() == Action.RIGHT_CLICK_BLOCK)
-		{
-			if(CaptureTheCloth.instance().isPlayerLoadout(event.getPlayer(), this.getClass()))
+			if(CaptureTheCloth.instance().isPlayerLoadout(player, this.getClass()))
 			{
-				new BukkitRunnable()
+				if(event.getDamage(DamageModifier.BLOCKING) < 0)
 				{
-					@Override
-					public void run()
+					if(player.isBlocking())
 					{
-						event.getPlayer().getInventory().setItemInOffHand(new ItemStack(Material.AIR));
+						player.getInventory().setItemInOffHand(new ItemStack(Material.AIR));
 						new BukkitRunnable()
 						{
 							@Override
 							public void run()
 							{
-								event.getPlayer().getInventory().setItemInOffHand(new ItemStack(Material.SHIELD));
+								player.getInventory().setItemInOffHand(new ItemStack(Material.SHIELD));
 							}
 							
-						}.runTaskLater(CaptureTheCloth.instance(), CaptureTheCloth.TICKS_PER_SECOND * 5);
+						}.runTaskLater(CaptureTheCloth.instance(), CaptureTheCloth.TICKS_PER_SECOND * 3);
 					}
-					
-				}.runTaskLater(CaptureTheCloth.instance(), CaptureTheCloth.TICKS_PER_SECOND * 2);
+				}
 			}
 		}
-	}*/
+	}
 }

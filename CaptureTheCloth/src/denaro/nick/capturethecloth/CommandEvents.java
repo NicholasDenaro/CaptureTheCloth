@@ -20,6 +20,7 @@ import org.bukkit.plugin.InvalidPluginException;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginLoader;
 import org.bukkit.plugin.UnknownDependencyException;
+import org.bukkit.scheduler.BukkitRunnable;
 
 import net.md_5.bungee.api.ChatColor;
 
@@ -101,6 +102,17 @@ public class CommandEvents implements CommandExecutor
 				{
 					sender.sendMessage(ChatColor.RED + "Incorrect number of arguments.");
 					return false;
+				}
+			}
+			else if("set-team-room".equals(command.getName()))
+			{
+				if(CaptureTheCloth.instance().setTeamRoom(player))
+				{
+					sender.sendMessage(ChatColor.YELLOW + "Spawn set.");
+				}
+				else
+				{
+					sender.sendMessage(ChatColor.YELLOW + "Not in match/team.");
 				}
 			}
 			else if("set-team-spawn".equals(command.getName()))
@@ -188,7 +200,7 @@ public class CommandEvents implements CommandExecutor
 						player.sendMessage(ChatColor.GOLD + "Not in a match.");
 						return true;
 					}
-					Archer.setLoadout(player);
+					CaptureTheCloth.instance().setPlayerLoadout(player, Archer.class);
 				}
 			}else if("magician".equals(command.getName()))
 			{
@@ -204,7 +216,7 @@ public class CommandEvents implements CommandExecutor
 						player.sendMessage(ChatColor.GOLD + "Not in a match.");
 						return true;
 					}
-					Magician.setLoadout(player);
+					CaptureTheCloth.instance().setPlayerLoadout(player, Magician.class);
 				}
 			}
 			else if("warrior".equals(command.getName()))
@@ -221,7 +233,7 @@ public class CommandEvents implements CommandExecutor
 						player.sendMessage(ChatColor.GOLD + "Not in a match.");
 						return true;
 					}
-					Warrior.setLoadout(player);
+					CaptureTheCloth.instance().setPlayerLoadout(player, Warrior.class);
 				}
 			}
 			else if("create-match".equals(command.getName()))
@@ -303,14 +315,25 @@ public class CommandEvents implements CommandExecutor
 				}
 				else
 				{
-					if(CaptureTheCloth.instance().startMatch(args[0]))
+					Player pl = player;
+					long time = CaptureTheCloth.TICKS_PER_SECOND * 20;
+					new BukkitRunnable()
 					{
-						player.sendMessage(ChatColor.GREEN + "Match started.");
-					}
-					else
-					{
-						player.sendMessage(ChatColor.RED + "Failed to start match (it is likely started!).");
-					}
+						@Override
+						public void run()
+						{
+							if(CaptureTheCloth.instance().startMatch(args[0]))
+							{
+								pl.sendMessage(ChatColor.GREEN + "Match started.");
+							}
+							else
+							{
+								pl.sendMessage(ChatColor.RED + "Failed to start match (it is likely started!).");
+							}
+						}
+						
+					}.runTaskLater(CaptureTheCloth.instance(), time);
+					CaptureTheCloth.instance().announceStarting(args[0], time / CaptureTheCloth.TICKS_PER_SECOND);
 				}
 			}
 			else if("save-match".equals(command.getName()))
@@ -345,7 +368,7 @@ public class CommandEvents implements CommandExecutor
 					player.sendMessage(ChatColor.GREEN + "Lobby set.");
 				}
 			}
-			else if("link-button".equals(command.getName()))
+			else if("link-button-spawn".equals(command.getName()))
 			{
 				if(args.length != 0)
 				{
@@ -363,7 +386,35 @@ public class CommandEvents implements CommandExecutor
 					}
 					else
 					{
-						if(CaptureTheCloth.instance().setTeamButton(player, button.getLocation()))
+						if(CaptureTheCloth.instance().setTeamSpawnButton(player, button.getLocation()))
+						{
+							player.sendMessage(ChatColor.GREEN + "Linked button to team: "+CaptureTheCloth.instance().getTeam(player));
+						}
+						else
+						{
+							player.sendMessage(ChatColor.RED + "Failed to link button.");
+						}
+					}
+				}
+			}
+			else if("link-button-room".equals(command.getName()))
+			{
+				if(args.length != 0)
+				{
+					player.sendMessage(ChatColor.RED + "This command takes no arguments.");
+					return false;
+				}
+				else
+				{
+					Block button = player.getTargetBlock((Set<Material>)null, 5);
+					if(button == null)
+					{
+						player.sendMessage(ChatColor.RED + "Found no button.");
+						return false;
+					}
+					else
+					{
+						if(CaptureTheCloth.instance().setTeamRoomButton(player, button.getLocation()))
 						{
 							player.sendMessage(ChatColor.GREEN + "Linked button to team: "+CaptureTheCloth.instance().getTeam(player));
 						}

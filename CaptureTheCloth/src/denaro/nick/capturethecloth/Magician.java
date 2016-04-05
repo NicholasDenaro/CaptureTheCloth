@@ -41,8 +41,6 @@ public class Magician implements Listener
 		inventory.setItem(1, slowArrow);
 		inventory.setItem(2, new ItemStack(Material.EYE_OF_ENDER));
 		inventory.setItem(3, new ItemStack(Material.STICK));
-		
-		CaptureTheCloth.instance().setPlayerLoadout(player, Magician.class);
 	}
 	
 	/*@EventHandler
@@ -71,6 +69,11 @@ public class Magician implements Listener
 	@EventHandler
 	public void onRightClickEntity(PlayerInteractAtEntityEvent event)
 	{
+		if(!CaptureTheCloth.instance().isSpawned(event.getPlayer()))
+		{
+			event.setCancelled(true);
+			return;
+		}
 		if(CaptureTheCloth.instance().isPlayerLoadout(event.getPlayer(), this.getClass()))
 		{
 			ItemStack item = event.getPlayer().getInventory().getItemInMainHand();
@@ -118,6 +121,11 @@ public class Magician implements Listener
 	@EventHandler
 	public void onRightClick(PlayerInteractEvent event)
 	{
+		if(!CaptureTheCloth.instance().isSpawned(event.getPlayer()))
+		{
+			event.setCancelled(true);
+			return;
+		}
 		if(event.getAction() == Action.RIGHT_CLICK_AIR || event.getAction() == Action.RIGHT_CLICK_BLOCK)
 		{
 			if(CaptureTheCloth.instance().isPlayerLoadout(event.getPlayer(), this.getClass()))

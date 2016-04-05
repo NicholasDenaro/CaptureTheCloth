@@ -28,6 +28,7 @@ public class Match
 	private long time;
 	private int maxTeamSize;
 	private ArrayList<Team> teams;
+	private HashMap<Team, Location> teamRoom;
 	private HashMap<Team, Location> spawns;
 	private HashMap<Team, Location> flags;
 	private HashMap<Team, Location> currentFlags;
@@ -46,11 +47,20 @@ public class Match
 		invisiblePlayers = new HashMap<Player, Player>();
 		score = new HashMap<Team, Integer>();
 		teams = new ArrayList<Team>();
+		teamRoom = new HashMap<Team, Location>();
 		spawns = new HashMap<Team, Location>();
 		flags = new HashMap<Team, Location>();
 		currentFlags = new HashMap<Team, Location>();
 		heldFlags = new HashMap<Player, Team>();
 		started = false;
+	}
+	
+	public void broadcastMessage(String message)
+	{
+		for(Team team: teams)
+		{
+			team.broadcastMessage(message);
+		}
 	}
 	
 	public boolean start()
@@ -66,8 +76,10 @@ public class Match
 			currentFlags.put(team, flags.get(team));
 			score.put(team, 0);
 			
-			team.sendMessage(ChatColor.GOLD + "Match start!");
+			team.broadcastMessage(ChatColor.GOLD + "Match start!");
 		}
+		
+		Match thisMatch = this;
 		
 		new BukkitRunnable(){
 
@@ -91,19 +103,20 @@ public class Match
 				}
 				for(Team team : teams)
 				{
-					team.sendMessage(ChatColor.GOLD + "Match finished.");
+					team.broadcastMessage(ChatColor.GOLD + "Match finished.");
 					if(winners.size() != 1)
 					{
-						team.sendMessage(ChatColor.GOLD + "Draw!");
+						team.broadcastMessage(ChatColor.GOLD + "Draw!");
 						for(Team winner : winners)
 						{
-							team.sendMessage(ChatColor.GOLD + "-"+winner.getName());
+							team.broadcastMessage(ChatColor.GOLD + "-"+winner.getName());
 						}
 					}
 					else
 					{
-						team.sendMessage(ChatColor.GOLD + "-"+winners.get(0).getName());
+						team.broadcastMessage(ChatColor.GOLD + "-"+winners.get(0).getName());
 					}
+					CaptureTheCloth.instance().endMatch(thisMatch);
 				}
 			}
 			
@@ -123,6 +136,24 @@ public class Match
 		return maxTeamSize;
 	}
 	
+	public Location getTeamRoom(Team team)
+	{
+		return teamRoom.get(team);
+	}
+	
+	public Location getTeamRoom(String teamName)
+	{
+		for(Team team : teams)
+		{
+			if(team.getName().equals(teamName))
+			{
+				return teamRoom.get(team);
+			}
+		}
+		
+		return null;
+	}
+	
 	public Location getTeamSpawn(Team team)
 	{
 		return spawns.get(team);
@@ -139,6 +170,11 @@ public class Match
 		}
 		
 		return null;
+	}
+	
+	public void setTeamRoom(Team team, Location spawn)
+	{
+		teamRoom.put(team, spawn);
 	}
 	
 	public void setTeamSpawn(Team team, Location spawn)
@@ -247,7 +283,7 @@ public class Match
 				if(team.getNumberOfPlayers() < maxTeamSize)
 				{
 					team.addPlayer(player);
-					player.teleport(spawns.get(team));
+					player.teleport(teamRoom.get(team));
 					System.out.println("Added " + player.getName() + " to team " + team.getName() + ".");
 					player.sendMessage(ChatColor.AQUA + "Joined team " + teamName);
 					return true;

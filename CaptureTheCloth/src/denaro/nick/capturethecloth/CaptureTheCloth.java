@@ -2,7 +2,9 @@ package denaro.nick.capturethecloth;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Set;
 
 import org.bukkit.ChatColor;
@@ -29,7 +31,10 @@ public class CaptureTheCloth extends JavaPlugin
 	private HashMap<Player, Match> playersMatch;
 	private HashMap<Player, Team> playersTeam;
 	private HashMap<Player, Class<?>> playersLoadouts;
-	private HashMap<Location, Tuple<Match, Team>> buttons;
+	private HashMap<Location, Tuple<Match, Team>> buttonsSpawn;
+	private HashMap<Location, Tuple<Match, Team>> buttonsRoom;
+	private HashSet<Player> playerLimbo;
+	private HashSet<Match> startedMatches;
 	
 	@Override
 	public void onEnable()
@@ -39,7 +44,10 @@ public class CaptureTheCloth extends JavaPlugin
 		playersMatch = new HashMap<Player, Match>();
 		playersTeam = new HashMap<Player, Team>();
 		playersLoadouts = new HashMap<Player, Class<?>>();
-		buttons = new HashMap<Location, Tuple<Match, Team>>();
+		buttonsSpawn = new HashMap<Location, Tuple<Match, Team>>();
+		buttonsRoom = new HashMap<Location, Tuple<Match, Team>>();
+		playerLimbo = new HashSet<Player>();
+		startedMatches = new HashSet<Match>();
 		if(firstLoad)createConfig();
 		loadTeams();
 		loadMatches();
@@ -58,7 +66,10 @@ public class CaptureTheCloth extends JavaPlugin
 	{
 		for(Player player : playersMatch.keySet())
 		{
-			leaveMatch(player);
+			getServer().broadcastMessage(ChatColor.LIGHT_PURPLE + "Made " + player.getName()+" leave match.");
+			//leaveMatch(player);
+			player.getInventory().clear();
+			player.teleport(lobbyLocation);
 		}
 		System.out.println("CaptureTheCloth was disabled!");
 		getServer().broadcastMessage(ChatColor.DARK_AQUA + "Diabled CTC");
@@ -99,6 +110,47 @@ public class CaptureTheCloth extends JavaPlugin
 		return lobbyLocation;
 	}
 	
+	public boolean isMatchStarted(Player player)
+	{
+		return startedMatches.contains(playersMatch.get(player));
+	}
+	
+	public boolean isSpawned(Player player)
+	{
+		return !playerLimbo.contains(player);
+	}
+	
+	public void spawnPlayer(Player player)
+	{
+		player.teleport(getPlayerSpawn(player));
+		new BukkitRunnable(){
+
+			@Override
+			public void run()
+			{
+				playerLimbo.remove(player);
+			}
+			
+		}.runTaskLater(this, 1);
+	}
+	
+	public Location getPlayerRoom(Player player)
+	{
+		Match match = playersMatch.get(player);
+		Team team = playersTeam.get(player);
+		if(match != null && team != null)
+		{
+			Location location = playersMatch.get(player).getTeamRoom(team);
+			if(location == null)
+			{
+				player.sendMessage("team spawn is null.");
+			}
+			return location;
+		}
+		player.sendMessage("Not in a team or match.");
+		return lobbyLocation;
+	}
+	
 	public static void cooldown(ItemStack item)
 	{
 		new BukkitRunnable()
@@ -127,6 +179,7 @@ public class CaptureTheCloth extends JavaPlugin
 		getCommand("set-lobby").setExecutor(commander);
 		getCommand("create-team").setExecutor(commander);
 		getCommand("create-match").setExecutor(commander);
+		getCommand("set-team-room").setExecutor(commander);
 		getCommand("set-team-spawn").setExecutor(commander);
 		getCommand("set-team-flag").setExecutor(commander);
 		getCommand("join-match").setExecutor(commander);
@@ -134,7 +187,8 @@ public class CaptureTheCloth extends JavaPlugin
 		getCommand("start-match").setExecutor(commander);
 		getCommand("save-match").setExecutor(commander);
 		getCommand("get-team").setExecutor(commander);
-		getCommand("link-button").setExecutor(commander);
+		getCommand("link-button-spawn").setExecutor(commander);
+		getCommand("link-button-room").setExecutor(commander);
 		getCommand("invisible").setExecutor(commander);
 		getCommand("archer").setExecutor(commander);
 		getCommand("magician").setExecutor(commander);
@@ -190,21 +244,31 @@ public class CaptureTheCloth extends JavaPlugin
 		return playersTeam.get(p1) == playersTeam.get(p2) && playersTeam.get(p1) != null;
 	}
 	
-	public boolean isTeamButton(Location button)
+	public boolean isTeamSpawnButton(Location button)
 	{
-		return buttons.containsKey(button);
+		return buttonsSpawn.containsKey(button);
+	}
+	
+	public boolean isTeamRoomButton(Location button)
+	{
+		return buttonsRoom.containsKey(button);
 	}
 	
 	public boolean joinMatchByButton(Location button, Player player)
 	{
-		Tuple<Match, Team> info = buttons.get(button);
+		Tuple<Match, Team> info = buttonsRoom.get(button);
 		if(info == null)
 		{
 			return false;
 		}
 		String matchName = info.a().getName();
 		String teamName = info.b().getName();
-		return joinMatch(matchName, teamName, player);
+		if(joinMatch(matchName, teamName, player))
+		{
+			playerLimbo.add(player);
+			return true;
+		}
+		return false;
 	}
 	
 	public void setLobby(Player player)
@@ -213,7 +277,7 @@ public class CaptureTheCloth extends JavaPlugin
 		saveSettings();
 	}
 	
-	public boolean setTeamButton(Player player, Location button)
+	public boolean setTeamSpawnButton(Player player, Location button)
 	{
 		Team team = playersTeam.get(player);
 		Match match = playersMatch.get(player);
@@ -223,8 +287,37 @@ public class CaptureTheCloth extends JavaPlugin
 			return false;
 		}
 		
-		buttons.put(button, new Tuple<Match, Team>(match, team));
+		buttonsSpawn.put(button, new Tuple<Match, Team>(match, team));
 		
+		return true;
+	}
+	
+	public boolean setTeamRoomButton(Player player, Location button)
+	{
+		Team team = playersTeam.get(player);
+		Match match = playersMatch.get(player);
+		
+		if(match == null || team == null)
+		{
+			return false;
+		}
+		
+		buttonsRoom.put(button, new Tuple<Match, Team>(match, team));
+		
+		return true;
+	}
+	
+	public boolean setTeamRoom(Player player)
+	{
+		Team team = playersTeam.get(player);
+		Match match = playersMatch.get(player);
+		
+		if(match == null || team == null)
+		{
+			return false;
+		}
+		
+		match.setTeamRoom(team, player.getLocation());
 		return true;
 	}
 	
@@ -272,11 +365,41 @@ public class CaptureTheCloth extends JavaPlugin
 		{
 			if(game.getName().equals(name))
 			{
-				return game.start();
+				if(game.start())
+				{
+					startedMatches.add(game);
+					return true;
+				}
+				return false;
 			}
 		}
 		
 		return false;
+	}
+	
+	public boolean endMatch(Match match)
+	{
+		startedMatches.remove(match);
+		for(Player player : playersMatch.keySet())
+		{
+			if(match == playersMatch.get(player))
+			{
+				leaveMatch(player);
+			}
+		}
+		
+		return false;
+	}
+	
+	public void announceStarting(String name, long time)
+	{
+		for(Match game: matches.values())
+		{
+			if(game.getName().equals(name))
+			{
+				game.broadcastMessage(ChatColor.GOLD + "Match starting in " + time + " seconds.");
+			}
+		}
 	}
 	
 	public boolean joinMatch(String matchName, String teamName, Player player)
@@ -413,16 +536,26 @@ public class CaptureTheCloth extends JavaPlugin
 		
 		for(String teamName : teamNames)
 		{
+			config.set("matches."+match.getName()+".teams."+teamName+".room", match.getTeamRoom(teamName));
 			config.set("matches."+match.getName()+".teams."+teamName+".spawn", match.getTeamSpawn(teamName));
 			config.set("matches."+match.getName()+".teams."+teamName+".flag", match.getTeamFlag(teamName));
 		}
 		
-		for(Location button : buttons.keySet())
+		for(Location button : buttonsSpawn.keySet())
 		{
-			Tuple<Match, Team> info = buttons.get(button);
+			Tuple<Match, Team> info = buttonsSpawn.get(button);
 			if(info.a().getName().equals(matchName))
 			{
-				config.set("matches."+match.getName()+".teams."+info.b().getName()+".button", button);
+				config.set("matches."+match.getName()+".teams."+info.b().getName()+".button.spawn", button);
+			}
+		}
+		
+		for(Location button : buttonsRoom.keySet())
+		{
+			Tuple<Match, Team> info = buttonsRoom.get(button);
+			if(info.a().getName().equals(matchName))
+			{
+				config.set("matches."+match.getName()+".teams."+info.b().getName()+".button.room", button);
 			}
 		}
 		
@@ -457,13 +590,17 @@ public class CaptureTheCloth extends JavaPlugin
 					if(team != null)
 					{
 						match.addTeam(team);
+						Location room = (Location) teamSection.get(teamKey + ".room");
 						Location spawn = (Location) teamSection.get(teamKey + ".spawn");
 						Location flag = (Location) teamSection.get(teamKey + ".flag");
-						Location button = (Location) teamSection.get(teamKey + ".button");
+						Location spawnButton = (Location) teamSection.get(teamKey + ".button.spawn");
+						Location roomButton = (Location) teamSection.get(teamKey + ".button.room");
+						if(room != null)
+							match.setTeamRoom(team, room);
 						match.setTeamSpawn(team, spawn);
 						match.setTeamFlag(team, flag);
-						buttons.put(button, new Tuple<Match, Team>(match,team));
-						System.out.println(button + "\n  "+match.getName()+"::"+team.getName());
+						buttonsSpawn.put(spawnButton, new Tuple<Match, Team>(match,team));
+						buttonsRoom.put(roomButton, new Tuple<Match, Team>(match,team));
 					}
 					else
 					{
@@ -531,9 +668,21 @@ public class CaptureTheCloth extends JavaPlugin
 		playersLoadouts.remove(player);
 	}
 	
-	public void setPlayerLoadout(Player player, Class<?> c)
+	public boolean setPlayerLoadout(Player player, Class<?> c)
 	{
-		playersLoadouts.put(player, c);
+		try
+		{
+			c.getMethod("setLoadout", Player.class).invoke(null, player);
+			playersLoadouts.put(player, c);
+			return true;
+		}
+		catch(IllegalAccessException | IllegalArgumentException
+				| InvocationTargetException | NoSuchMethodException
+				| SecurityException e)
+		{
+			e.printStackTrace();
+		}
+		return false;
 	}
 
 	public boolean isPlayerLoadout(Player player, Class<?> c)

@@ -104,7 +104,7 @@ public class Team
 		}
 	}
 	
-	public void sendMessage(String message)
+	public void broadcastMessage(String message)
 	{
 		for(Player player : players)
 		{

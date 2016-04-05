@@ -12,15 +12,16 @@ import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.entity.EntityShootBowEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerItemHeldEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.player.PlayerPickupArrowEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.PotionMeta;
-import org.bukkit.material.Vine;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -64,13 +65,16 @@ public class Archer implements Listener
 		meta.addCustomEffect(new PotionEffect(PotionEffectType.POISON, (int) (CaptureTheCloth.TICKS_PER_SECOND * 2), 1), true);
 		poisonArrow.setItemMeta(meta);
 		inventory.setItem(BUFF_ARROW_SLOT, poisonArrow);
-		
-		CaptureTheCloth.instance().setPlayerLoadout(player, Archer.class);
 	}
 	
 	@EventHandler
 	public void onChangeHolding(PlayerItemHeldEvent event)
 	{
+		if(!CaptureTheCloth.instance().isSpawned(event.getPlayer()))
+		{
+			//event.setCancelled(true);
+			return;
+		}
 		if(bowDraw.containsKey(event.getPlayer()))
 		{
 			event.setCancelled(true);
@@ -78,18 +82,19 @@ public class Archer implements Listener
 	}
 	
 	@EventHandler
-	public void onTippedArrowHit(ProjectileHitEvent event)
+	public void onPlayerPickupArrow(PlayerPickupArrowEvent event)
 	{
-		if(event.getEntityType() == EntityType.TIPPED_ARROW)
-		{
-			event.getEntity().remove();
-		}
+		event.setCancelled(true);
 	}
 	
 	@EventHandler
 	public void onArcherClimb(PlayerMoveEvent event)
 	{
 		Player player = event.getPlayer();
+		if(!CaptureTheCloth.instance().isSpawned(player))
+		{
+			return;
+		}
 		if(CaptureTheCloth.instance().isPlayerLoadout(player, this.getClass()))
 		{
 			if(event.getFrom().getBlock().getType() == Material.VINE)
@@ -144,59 +149,67 @@ public class Archer implements Listener
 	public void onDrawBow(PlayerInteractEvent event)
 	{
 		Player player = event.getPlayer();
-		ItemStack hand = player.getInventory().getItemInMainHand();
-		if(hand.getType() == Material.BOW && hand.getEnchantmentLevel(Enchantment.LUCK) == 1)
+		if(!CaptureTheCloth.instance().isSpawned(player))
 		{
-			if(hand.getAmount() == 1)
+			event.setCancelled(true);
+			return;
+		}
+		ItemStack hand = player.getInventory().getItemInMainHand();
+		if(event.getAction() == Action.RIGHT_CLICK_AIR || event.getAction() == Action.RIGHT_CLICK_BLOCK)
+		{
+			if(hand.getType() == Material.BOW && hand.getEnchantmentLevel(Enchantment.LUCK) == 1)
 			{
-				if(bowDraw.get(player) == null)
+				if(hand.getAmount() == 1)
 				{
-					ItemStack arrows = player.getInventory().getItemInOffHand();
+					if(bowDraw.get(player) == null)
+					{
+						ItemStack arrows = player.getInventory().getItemInOffHand();
+						BukkitRunnable runnable = new BukkitRunnable(){
+			
+							@Override
+							public void run()
+							{
+								if(arrows.getAmount() < MAX_ARROW_RAIN_ARROWS)
+								{
+									arrows.setAmount(arrows.getAmount() + 1);
+								}
+							}
+							
+						};
+						runnable.runTaskTimer(CaptureTheCloth.instance(), CaptureTheCloth.TICKS_PER_SECOND * 1, (long) (CaptureTheCloth.TICKS_PER_SECOND * 0.3));
+						bowDraw.put(player, runnable);
+					}
+				}
+				else
+				{
+					event.setCancelled(true);
+				}
+			}
+			else if(hand.getType() == Material.BOW)
+			{
+				bowDraw.put(player, null);
+				if(!reloadBuffShot.containsKey(player))
+				{
 					BukkitRunnable runnable = new BukkitRunnable(){
-		
+	
 						@Override
 						public void run()
 						{
-							if(arrows.getAmount() < MAX_ARROW_RAIN_ARROWS)
+							if(player.getInventory().getItem(BUFF_ARROW_SLOT).getAmount() > 1)
 							{
-								arrows.setAmount(arrows.getAmount() + 1);
+								player.getInventory().getItem(BUFF_ARROW_SLOT).setAmount(player.getInventory().getItem(BUFF_ARROW_SLOT).getAmount() - 1);
+							}
+							if(player.getInventory().getItem(BUFF_ARROW_SLOT).getAmount() == 1)
+							{
+								this.cancel();
+								reloadBuffShot.remove(player);
 							}
 						}
 						
 					};
-					runnable.runTaskTimer(CaptureTheCloth.instance(), CaptureTheCloth.TICKS_PER_SECOND * 1, (long) (CaptureTheCloth.TICKS_PER_SECOND * 0.3));
-					bowDraw.put(player, runnable);
+					reloadBuffShot.put(player, runnable);
+					player.getInventory().setItemInOffHand(player.getInventory().getItem(BUFF_ARROW_SLOT).clone());
 				}
-			}
-			else
-			{
-				event.setCancelled(true);
-			}
-		}
-		else if(hand.getType() == Material.BOW)
-		{
-			bowDraw.put(player, null);
-			if(!reloadBuffShot.containsKey(player))
-			{
-				BukkitRunnable runnable = new BukkitRunnable(){
-
-					@Override
-					public void run()
-					{
-						if(player.getInventory().getItem(BUFF_ARROW_SLOT).getAmount() > 1)
-						{
-							player.getInventory().getItem(BUFF_ARROW_SLOT).setAmount(player.getInventory().getItem(BUFF_ARROW_SLOT).getAmount() - 1);
-						}
-						if(player.getInventory().getItem(BUFF_ARROW_SLOT).getAmount() == 1)
-						{
-							this.cancel();
-							reloadBuffShot.remove(player);
-						}
-					}
-					
-				};
-				reloadBuffShot.put(player, runnable);
-				player.getInventory().setItemInOffHand(player.getInventory().getItem(BUFF_ARROW_SLOT).clone());
 			}
 		}
 	}
@@ -207,6 +220,11 @@ public class Archer implements Listener
 		if(event.getEntity() instanceof Player)
 		{
 			Player player = (Player) event.getEntity();
+			if(!CaptureTheCloth.instance().isSpawned(player))
+			{
+				event.setCancelled(true);
+				return;
+			}
 			ItemStack bow = event.getBow();
 			Vector up = new Vector();
 			up.setY(1);

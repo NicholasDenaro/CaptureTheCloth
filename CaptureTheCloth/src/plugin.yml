@@ -12,6 +12,9 @@ commands:
   get-team:
     description: Gets your team
     usage: /get-team
+  set-team-room:
+    description: Sets your team's room
+    usage: /set-team-room
   set-team-spawn:
     description: Sets your team's spawn
     usage: /set-team-spawn
@@ -33,9 +36,12 @@ commands:
   save-match:
     description: Saves a match
     usage: /save-match <name>
-  link-button:
+  link-button-spawn:
+    description: Links the button you are looking at to the team's spawn
+    usage: /link-button-spawn
+  link-button-room:
     description: Links the button you are looking at to the team you are on
-    usage: /link-button
+    usage: /link-button-room
   invisible:
     description: makes you invisible to the other team
     usage: /invisible <on/off>

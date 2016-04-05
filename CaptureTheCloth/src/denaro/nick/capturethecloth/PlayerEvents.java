@@ -5,6 +5,7 @@ import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
+import org.bukkit.block.Sign;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -98,14 +99,14 @@ public class PlayerEvents implements Listener
 		}
 	}
 	
-	@EventHandler
+	@EventHandler(priority = EventPriority.LOWEST)
 	public void onPlayerInteract(PlayerInteractEvent event)
 	{
 		if(event.getPlayer().getGameMode() != GameMode.CREATIVE)
 		{
 			if(event.getAction() == Action.RIGHT_CLICK_BLOCK)
 			{
-				if(CaptureTheCloth.instance().isTeamButton(event.getClickedBlock().getLocation()))
+				if(CaptureTheCloth.instance().isTeamRoomButton(event.getClickedBlock().getLocation()))
 				{
 					if(CaptureTheCloth.instance().joinMatchByButton(event.getClickedBlock().getLocation(), event.getPlayer()))
 					{
@@ -116,14 +117,34 @@ public class PlayerEvents implements Listener
 						event.getPlayer().sendMessage(ChatColor.RED + "Failed to join match.");
 					}
 				}
-				else
+				else if(CaptureTheCloth.instance().isTeamSpawnButton(event.getClickedBlock().getLocation()))
 				{
-					//event.getPlayer().sendMessage(ChatColor.AQUA + "Not a team join button.");
+					if(CaptureTheCloth.instance().isMatchStarted(event.getPlayer()))
+					{
+						CaptureTheCloth.instance().spawnPlayer(event.getPlayer());
+						event.setCancelled(true);
+						//TODO: make player invincible for ~ 2 seconds
+					}
 				}
 			}
 			
 			if(event.getAction() == Action.LEFT_CLICK_BLOCK)
 			{
+				if(event.getClickedBlock().getType() == Material.WALL_SIGN)
+				{
+					Sign sign = (Sign) event.getClickedBlock().getState();
+					String loadout = sign.getLine(1);
+					try
+					{
+						Class c = Class.forName("denaro.nick.capturethecloth."+loadout);
+						CaptureTheCloth.instance().setPlayerLoadout(event.getPlayer(), c);
+					}
+					catch(ClassNotFoundException e)
+					{
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				}
 				event.setCancelled(true);
 				if(event.getClickedBlock().getType() == Material.DOUBLE_PLANT)
 				{
@@ -165,6 +186,7 @@ public class PlayerEvents implements Listener
 					//event.getPlayer().sendMessage(ChatColor.AQUA + "" + event.getClickedBlock().getType());
 				}
 			}
+			//event.setCancelled(true);
 		}
 	}
 	
@@ -213,7 +235,7 @@ public class PlayerEvents implements Listener
 	@EventHandler
 	public void onPlayerRespawn(PlayerRespawnEvent event)
 	{
-		Location spawn = CaptureTheCloth.instance().getPlayerSpawn(event.getPlayer());
+		Location spawn = CaptureTheCloth.instance().getPlayerRoom(event.getPlayer());
 		if(spawn == null)
 		{
 			event.getPlayer().sendMessage("null location.");
