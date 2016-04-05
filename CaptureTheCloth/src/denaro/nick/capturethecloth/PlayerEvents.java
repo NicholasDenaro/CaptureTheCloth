@@ -133,17 +133,8 @@ public class PlayerEvents implements Listener
 				if(event.getClickedBlock().getType() == Material.WALL_SIGN)
 				{
 					Sign sign = (Sign) event.getClickedBlock().getState();
-					String loadout = sign.getLine(1);
-					try
-					{
-						Class c = Class.forName("denaro.nick.capturethecloth."+loadout);
-						CaptureTheCloth.instance().setPlayerLoadout(event.getPlayer(), c);
-					}
-					catch(ClassNotFoundException e)
-					{
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
+					String loadoutName = sign.getLine(1);
+					CaptureTheCloth.instance().setPlayerLoadout(event.getPlayer(), loadoutName);
 				}
 				event.setCancelled(true);
 				if(event.getClickedBlock().getType() == Material.DOUBLE_PLANT)

@@ -14,7 +14,6 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.entity.EntityShootBowEvent;
-import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerItemHeldEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
@@ -27,7 +26,7 @@ import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
 
-public class Archer implements Listener
+public class Archer implements Loadout
 {
 	public static final int MAX_ARROW_RAIN_ARROWS = 20;
 	
@@ -36,7 +35,7 @@ public class Archer implements Listener
 	private HashMap<Player, BukkitRunnable> bowDraw = new HashMap<Player, BukkitRunnable>();
 	private HashMap<Player, BukkitRunnable> reloadBuffShot = new HashMap<Player, BukkitRunnable>();
 	
-	public static void setLoadout(Player player)
+	public void setLoadout(Player player)
 	{
 		PlayerInventory inventory = player.getInventory();
 		CaptureTheCloth.instance().resetPlayerInventory(player);
@@ -67,6 +66,18 @@ public class Archer implements Listener
 		inventory.setItem(BUFF_ARROW_SLOT, poisonArrow);
 	}
 	
+	public void removeLoadout(Player player)
+	{
+		if(bowDraw.containsKey(player))
+		{
+			bowDraw.get(player).cancel();
+		}
+		if(reloadBuffShot.containsKey(player))
+		{
+			reloadBuffShot.get(player).cancel();
+		}
+	}
+	
 	@EventHandler
 	public void onChangeHolding(PlayerItemHeldEvent event)
 	{
@@ -95,7 +106,7 @@ public class Archer implements Listener
 		{
 			return;
 		}
-		if(CaptureTheCloth.instance().isPlayerLoadout(player, this.getClass()))
+		if(CaptureTheCloth.instance().isPlayerLoadout(player, this))
 		{
 			if(event.getFrom().getBlock().getType() == Material.VINE)
 			{

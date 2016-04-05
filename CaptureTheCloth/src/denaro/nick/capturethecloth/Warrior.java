@@ -15,11 +15,11 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 
-public class Warrior implements Listener
+public class Warrior implements Loadout
 {
 	public static final int BULLDOZE_SLOT = 1;
 	
-	public static void setLoadout(Player player)
+	public void setLoadout(Player player)
 	{
 		PlayerInventory inventory = player.getInventory();
 		CaptureTheCloth.instance().resetPlayerInventory(player);
@@ -35,6 +35,11 @@ public class Warrior implements Listener
 		inventory.setItemInOffHand(shield);
 	}
 	
+	public void removeLoadout(Player player)
+	{
+		
+	}
+	
 	@EventHandler
 	public void onPlayerSprint(PlayerToggleSprintEvent event)
 	{
@@ -46,7 +51,7 @@ public class Warrior implements Listener
 		if(event.isSprinting())
 		{
 			Player player = (Player) event.getPlayer();
-			if(CaptureTheCloth.instance().isPlayerLoadout(player, this.getClass()))
+			if(CaptureTheCloth.instance().isPlayerLoadout(player, this))
 			{
 				ItemStack sprint = player.getInventory().getItem(BULLDOZE_SLOT);
 				if(sprint.getAmount() == 1)
@@ -70,7 +75,7 @@ public class Warrior implements Listener
 				event.setCancelled(true);
 				return;
 			}
-			if(CaptureTheCloth.instance().isPlayerLoadout(player, this.getClass()))
+			if(CaptureTheCloth.instance().isPlayerLoadout(player, this))
 			{
 				if(event.getDamage(DamageModifier.BLOCKING) < 0)
 				{

@@ -26,9 +26,9 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 
-public class Magician implements Listener
+public class Magician implements Loadout
 {
-	public static void setLoadout(Player player)
+	public void setLoadout(Player player)
 	{
 		PlayerInventory inventory = player.getInventory();
 		CaptureTheCloth.instance().resetPlayerInventory(player);
@@ -41,6 +41,11 @@ public class Magician implements Listener
 		inventory.setItem(1, slowArrow);
 		inventory.setItem(2, new ItemStack(Material.EYE_OF_ENDER));
 		inventory.setItem(3, new ItemStack(Material.STICK));
+	}
+	
+	public void removeLoadout(Player player)
+	{
+		
 	}
 	
 	/*@EventHandler
@@ -74,7 +79,7 @@ public class Magician implements Listener
 			event.setCancelled(true);
 			return;
 		}
-		if(CaptureTheCloth.instance().isPlayerLoadout(event.getPlayer(), this.getClass()))
+		if(CaptureTheCloth.instance().isPlayerLoadout(event.getPlayer(), this))
 		{
 			ItemStack item = event.getPlayer().getInventory().getItemInMainHand();
 			if(item.getType() == Material.EYE_OF_ENDER)
@@ -85,7 +90,7 @@ public class Magician implements Listener
 					Firework firework = (Firework) player.getLocation().getWorld().spawnEntity(event.getRightClicked().getLocation(), EntityType.FIREWORK);
 					
 					FireworkMeta meta = firework.getFireworkMeta();
-					meta.setPower(0);
+					meta.setPower(1);
 					firework.setFireworkMeta(meta);
 					firework.setPassenger(event.getRightClicked());
 					
@@ -105,6 +110,9 @@ public class Magician implements Listener
 			Arrow arrow = (Arrow) event.getDamager();
 			if(arrow.getFireTicks() > 0)
 			{
+				Player shooter = (Player) arrow.getShooter();
+				float distance = (float) arrow.getLocation().distance(shooter.getLocation());
+				arrow.setFireTicks((int) Math.max(arrow.getFireTicks() - distance / 50 * CaptureTheCloth.TICKS_PER_SECOND, CaptureTheCloth.TICKS_PER_SECOND));
 				event.setDamage(0);
 			}
 		}
@@ -128,7 +136,7 @@ public class Magician implements Listener
 		}
 		if(event.getAction() == Action.RIGHT_CLICK_AIR || event.getAction() == Action.RIGHT_CLICK_BLOCK)
 		{
-			if(CaptureTheCloth.instance().isPlayerLoadout(event.getPlayer(), this.getClass()))
+			if(CaptureTheCloth.instance().isPlayerLoadout(event.getPlayer(), this))
 			{
 				ItemStack item = event.getItem();
 				if(item != null)

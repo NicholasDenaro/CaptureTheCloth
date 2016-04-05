@@ -4,6 +4,7 @@ import java.io.File;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import org.bukkit.Material;
@@ -14,6 +15,9 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.SimpleCommandMap;
 import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerChatTabCompleteEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.material.MaterialData;
 import org.bukkit.plugin.InvalidPluginException;
@@ -200,7 +204,7 @@ public class CommandEvents implements CommandExecutor
 						player.sendMessage(ChatColor.GOLD + "Not in a match.");
 						return true;
 					}
-					CaptureTheCloth.instance().setPlayerLoadout(player, Archer.class);
+					CaptureTheCloth.instance().setPlayerLoadout(player, "Archer");
 				}
 			}else if("magician".equals(command.getName()))
 			{
@@ -216,7 +220,7 @@ public class CommandEvents implements CommandExecutor
 						player.sendMessage(ChatColor.GOLD + "Not in a match.");
 						return true;
 					}
-					CaptureTheCloth.instance().setPlayerLoadout(player, Magician.class);
+					CaptureTheCloth.instance().setPlayerLoadout(player, "Magician");
 				}
 			}
 			else if("warrior".equals(command.getName()))
@@ -233,7 +237,7 @@ public class CommandEvents implements CommandExecutor
 						player.sendMessage(ChatColor.GOLD + "Not in a match.");
 						return true;
 					}
-					CaptureTheCloth.instance().setPlayerLoadout(player, Warrior.class);
+					CaptureTheCloth.instance().setPlayerLoadout(player, "Warrior");
 				}
 			}
 			else if("create-match".equals(command.getName()))
@@ -431,5 +435,4 @@ public class CommandEvents implements CommandExecutor
 		}
 		return true;
 	}
-
 }

@@ -12,6 +12,7 @@ import org.bukkit.Location;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
+import org.bukkit.event.Listener;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -30,7 +31,8 @@ public class CaptureTheCloth extends JavaPlugin
 	private Location lobbyLocation;
 	private HashMap<Player, Match> playersMatch;
 	private HashMap<Player, Team> playersTeam;
-	private HashMap<Player, Class<?>> playersLoadouts;
+	private HashMap<Player, Loadout> playersLoadouts;
+	private HashMap<String, Loadout> loadouts;
 	private HashMap<Location, Tuple<Match, Team>> buttonsSpawn;
 	private HashMap<Location, Tuple<Match, Team>> buttonsRoom;
 	private HashSet<Player> playerLimbo;
@@ -43,7 +45,7 @@ public class CaptureTheCloth extends JavaPlugin
 		matches = new HashMap<String, Match>();
 		playersMatch = new HashMap<Player, Match>();
 		playersTeam = new HashMap<Player, Team>();
-		playersLoadouts = new HashMap<Player, Class<?>>();
+		playersLoadouts = new HashMap<Player, Loadout>();
 		buttonsSpawn = new HashMap<Location, Tuple<Match, Team>>();
 		buttonsRoom = new HashMap<Location, Tuple<Match, Team>>();
 		playerLimbo = new HashSet<Player>();
@@ -77,10 +79,14 @@ public class CaptureTheCloth extends JavaPlugin
 	
 	private void registerListeners()
 	{
+		loadouts = new HashMap<String, Loadout>();
 		this.getServer().getPluginManager().registerEvents(new PlayerEvents(), this);
-		this.getServer().getPluginManager().registerEvents(new Archer(), this);
-		this.getServer().getPluginManager().registerEvents(new Magician(), this);
-		this.getServer().getPluginManager().registerEvents(new Warrior(), this);
+		loadouts.put("Archer", new Archer());
+		loadouts.put("Magician", new Magician());
+		loadouts.put("Warrior", new Warrior());
+		this.getServer().getPluginManager().registerEvents(loadouts.get("Archer"), this);
+		this.getServer().getPluginManager().registerEvents(loadouts.get("Magician"), this);
+		this.getServer().getPluginManager().registerEvents(loadouts.get("Warrior"), this);
 	}
 	
 	public Location getLobbyLocation()
@@ -663,30 +669,35 @@ public class CaptureTheCloth extends JavaPlugin
 		}
 	}
 	
-	public void removePlayerLoadout(Player player)
+	public Loadout getLoadout(String name)
 	{
-		playersLoadouts.remove(player);
+		return loadouts.get(name);
 	}
 	
-	public boolean setPlayerLoadout(Player player, Class<?> c)
+	public void removePlayerLoadout(Player player)
 	{
-		try
+		Loadout loadout = playersLoadouts.remove(player);
+		if(loadout != null)
 		{
-			c.getMethod("setLoadout", Player.class).invoke(null, player);
-			playersLoadouts.put(player, c);
+			loadout.removeLoadout(player);
+		}
+	}
+	
+	public boolean setPlayerLoadout(Player player, String name)
+	{
+		if(loadouts.containsKey(name))
+		{
+			removePlayerLoadout(player);
+			playersLoadouts.put(player, loadouts.get(name));
+			loadouts.get(name).setLoadout(player);
 			return true;
 		}
-		catch(IllegalAccessException | IllegalArgumentException
-				| InvocationTargetException | NoSuchMethodException
-				| SecurityException e)
-		{
-			e.printStackTrace();
-		}
+		
 		return false;
 	}
 
-	public boolean isPlayerLoadout(Player player, Class<?> c)
+	public boolean isPlayerLoadout(Player player, Loadout loadout)
 	{
-		return playersLoadouts.get(player) == c;
+		return playersLoadouts.get(player) == loadout;
 	}
 }
