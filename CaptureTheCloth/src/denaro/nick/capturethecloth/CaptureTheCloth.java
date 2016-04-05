@@ -123,7 +123,7 @@ public class CaptureTheCloth extends JavaPlugin
 	
 	public boolean isSpawned(Player player)
 	{
-		return !playerLimbo.contains(player);
+		return !playerLimbo.contains(player) && playersMatch.containsKey(player);
 	}
 	
 	public void spawnPlayer(Player player)

@@ -337,7 +337,8 @@ public class CommandEvents implements CommandExecutor
 						}
 						
 					}.runTaskLater(CaptureTheCloth.instance(), time);
-					CaptureTheCloth.instance().announceStarting(args[0], time / CaptureTheCloth.TICKS_PER_SECOND);
+					CaptureTheCloth.instance().getServer().broadcastMessage(ChatColor.GOLD + args[0] + " is starting in " + time / CaptureTheCloth.TICKS_PER_SECOND + " seconds!");
+					//CaptureTheCloth.instance().announceStarting(args[0], time / CaptureTheCloth.TICKS_PER_SECOND);
 				}
 			}
 			else if("save-match".equals(command.getName()))

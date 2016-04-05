@@ -69,6 +69,8 @@ public class Match
 		{
 			return false;
 		}
+
+		CaptureTheCloth.instance().getServer().broadcastMessage(ChatColor.GOLD + getName() + " has begun!");
 		
 		for(Team team : teams)
 		{

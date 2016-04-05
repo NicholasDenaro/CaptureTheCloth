@@ -20,12 +20,16 @@ import org.bukkit.event.entity.EntityRegainHealthEvent.RegainReason;
 import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.player.PlayerDropItemEvent;
+import org.bukkit.event.player.PlayerInteractAtEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.player.PlayerPickupItemEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.event.player.PlayerSwapHandItemsEvent;
+import org.bukkit.material.Door;
 import org.bukkit.scheduler.BukkitRunnable;
 
 public class PlayerEvents implements Listener
@@ -98,12 +102,38 @@ public class PlayerEvents implements Listener
 			event.setCancelled(true);
 		}
 	}
+
+	@EventHandler
+	public void onPickupEvent(PlayerPickupItemEvent event)
+	{
+		event.setCancelled(true);
+	}
+	
+	@EventHandler
+	public void onDropEvent(PlayerDropItemEvent event)
+	{
+		event.setCancelled(true);
+	}
+	
+	@EventHandler
+	public void onOpenDoor(PlayerInteractEvent event)
+	{
+		if(event.getClickedBlock().getState().getData() instanceof Door)
+		{
+			event.setCancelled(!CaptureTheCloth.instance().isSpawned(event.getPlayer()));
+		}
+	}
 	
 	@EventHandler(priority = EventPriority.LOWEST)
 	public void onPlayerInteract(PlayerInteractEvent event)
 	{
 		if(event.getPlayer().getGameMode() != GameMode.CREATIVE)
 		{
+			if(event.getAction() == Action.PHYSICAL)
+			{
+				event.getPlayer().sendMessage(ChatColor.DARK_GRAY + "InteractEvent: Action == PHYSICAL");
+				event.setCancelled(true);
+			}
 			if(event.getAction() == Action.RIGHT_CLICK_BLOCK)
 			{
 				if(CaptureTheCloth.instance().isTeamRoomButton(event.getClickedBlock().getLocation()))
